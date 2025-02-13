@@ -23,7 +23,7 @@ while True:
     # Get current time for FPS
     new_frame_time = time.time()
 
-    results = model(frame_resized) #This applies the model  
+    results = model(frame_resized, conf=0.35) #This applies the model  
 
     
     annotated_frame = results[0].plot()  
