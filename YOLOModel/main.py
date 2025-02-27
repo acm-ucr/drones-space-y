@@ -12,8 +12,7 @@ cap = cv2.VideoCapture(0)
 frame_rate = 60 # Target FPS
 prev_frame_time = 0
 
-largestConeCoordinates = []
-largestArea = 0
+
 
 while True:
     ret, frame = cap.read()
@@ -26,50 +25,47 @@ while True:
     # Get current time for FPS
     new_frame_time = time.time()
 
-    results = model(frame_resized) #This applies the model  
-    if results:
-        for result in results:
-            xyxys = result.boxes.xyxy
-            for xyxy in xyxys:
-                smallx = xyxy[0]
-                largey = xyxy[1]
-                largex = xyxy[2]
-                smally = xyxy[3]
-                areaofCone = (0.5 * (largex - smallx) * (largey - smally))
-                if (not largestConeCoordinates):
-                    largestArea = areaofCone
-                    largestConeCoordinates.append(smallx)
-                    largestConeCoordinates.append(smally)
-                    largestConeCoordinates.append(largex)
-                    largestConeCoordinates.append(largey)
+    results = model(frame_resized, conf=0.3) #This applies the model  
 
-                else:
-                    if areaofCone > largestArea:
-                        largestArea = areaofCone
-                        largestConeCoordinates[0] = smallx
-                        largestConeCoordinates[1] = smally
-                        largestConeCoordinates[2] = largex
-                        largestConeCoordinates[3] = largey
-                if (largestConeCoordinates):
-                    if (largestConeCoordinates[0] < (640 / 3)):
-                        print(f"The drone should turn right")
-                        print()
-                        print()
-                    elif (largestConeCoordinates[0] > (640 / 3)):
-                        print(f"The drone should turn left")
-                        print()
-                        print()
-                    else:
-                        print("The drone is in the center. Turn right or left!")
-                        print()
-                        print()
-                largestConeCoordinates.clear()
+    largestConeCoordinates = []
+    largestArea = 0
+
+    if results and results[0].boxes is not None:
+        for result in results:
+            xyxys = result.boxes.xyxy #xyxy is in the format: (x_min, y_min, x_max, y_max)
+            for xyxy in xyxys:
+                smallx = xyxy[0].item()
+                smally = xyxy[1].item()
+                largex = xyxy[2].item()
+                largey = xyxy[3].item()
+                print(f"Small x: {smallx}")
+                print(f"Large y: {largey}")
+                print(f"Large x: {largex}")
+                print(f"Small y: {smally}")
                 
-            # xywhs = result.boxes.xywh
-            # for xywh in xywhs:
-            #     print(xywh)
-            #     listofxywh.append(xywh)
-    # break
+                areaofCone = 0.5 * (largex - smallx) * (largey - smally)
+                print(f"Area of Cone: {areaofCone}")
+                print(f"Largest area: {largestArea}")
+                if areaofCone > largestArea:
+                    print("Entered loop!")
+                    largestArea = areaofCone
+                    largestConeCoordinates = [smallx, smally, largex, largey]
+                    print("Appending data...")
+                    
+
+    print(f"{largestConeCoordinates}, {largestArea}")
+    if largestConeCoordinates:
+        center_x = (largestConeCoordinates[0] + largestConeCoordinates[2]) / 2 
+        frame_center_x = 640 / 2  
+        print("Entered loop!")
+
+        if center_x < frame_center_x:
+            print("The drone should turn right\n")
+        else:
+            print("The drone should turn left\n")
+
+        
+    
     
     annotated_frame = results[0].plot()
 
