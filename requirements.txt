@@ -1,0 +1,2 @@
+adafruit-circuitpython-lsm303-accel
+mpu6050-raspberrypi
