@@ -25,7 +25,7 @@ class MqttNode():
         # Stack that stores all the inputs
         # For model w/ multithreading, treat MqttObj.input_stack as the input stack
         self.image_stack = []
-        self.text_stack = []
+        self.msg_stack = []
 
     def on_connect(self, client, userdata, flags, rc): #FOR ME: RC is the return code. If it is 0, connection is successful
         if rc == 0:
@@ -40,17 +40,17 @@ class MqttNode():
         Appends the message to either the image or text stack
         '''
         payload = message.payload.decode("utf-8")
-        flag = payload[0]
+        flag = int(payload[0])
         content = payload[1:]
         if flag == 0:
             img_data = base64.b64decode(content)
             nparr = np.frombuffer(img_data, np.uint8)
             frame = cv2.imdecode(nparr, cv2.IMREAD_COLOR)
             if frame is not None: 
-                self.frame_stack.append(frame)
+                self.image_stack.append(frame)
                 print("Image frame received")
         elif flag == 1:
-            self.text_messages.append(content)
+            self.msg_stack.append(content)
             print("Text message received:", content)
 
     def send_message(self, message, type):
@@ -60,13 +60,17 @@ class MqttNode():
         type = 1 for string
         for image, message must be a numpy array
         '''
-        if type == 'image': 
+        if type == 0: 
             # Assume `message` is a cv2 image
+            # Payload is the sent message, with 0 / 1 as the first character
             _, buffer = cv2.imencode('.jpg', message)
             b64_str = base64.b64encode(buffer).decode("utf-8")
             payload = '0' + b64_str
-        if type == 'text': 
-            message = '1' + message
+        elif type == 1: 
+            payload = '1' + message
+        else: 
+            raise ValueError('Type of message not supported(use 0-image / 1-string)')
+        
         self.client.publish(self.topic, payload)
 
     def connect(self):
@@ -76,5 +80,27 @@ class MqttNode():
     def get_image_stack(self):
         return self.image_stack
 
-    def get_text_stack(self):
-        return self.text_stack
+    def get_msg_stack(self):
+        return self.msg_stack
+    
+    def disconnect(self):
+        self.client.loop_stop()
+        self.client.disconnect()
+
+# EXAMPLE CODE: 
+# from MqttNode import MqttNode
+# import time
+
+# client_id = "client_id"
+# broker = "test.mosquitto.org"
+# topic = "TEST"
+# mqtt = MqttNode(client_id, broker, topic)
+
+# mqtt.connect()
+
+# mqtt.client.loop_start()
+# while(True):
+#     message = 'bob'
+#     mqtt.send_message(message, 1)
+#     print('sent message!')
+#     time.sleep(10)
