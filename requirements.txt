@@ -1,2 +1,5 @@
 adafruit-circuitpython-lsm303-accel
 mpu6050-raspberrypi
+adafruit-circuitpython-pca9685
+RPi.GPIO
+Adafruit-Blinka
